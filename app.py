@@ -1,3 +1,4 @@
+import html
 import os
 if os.getenv('LANGFUSE_SECRET_KEY'):
     from langfuse.openai import OpenAI
@@ -8,7 +9,7 @@ import dotenv
 
 dotenv.load_dotenv(override=True)
 
-selected_model = "llama-3.2-90b-text-preview"
+selected_model = "/root/autodl-tmp/models"
 input_openai_api_base = os.getenv("OPENAI_API_BASE")
 def predict(message, history, system_prompt):
     client = OpenAI(            
@@ -27,32 +28,36 @@ def predict(message, history, system_prompt):
     stream=True)
 
     partial_message = ""
+    in_thinking_tag = True
     for chunk in response:
         if chunk.choices[0].delta.content is not None:
-              partial_message = partial_message + chunk.choices[0].delta.content
+              content = chunk.choices[0].delta.content
+              if in_thinking_tag:
+                  content = html.escape(content)
+              if chunk.choices[0].delta.content == "</think>":
+                  in_thinking_tag = False
+              partial_message = partial_message + content
               yield partial_message
-CSS ="""
-.contain { display: flex; flex-direction: column; }
-.gradio-container { height: 100vh !important; }
-#component-0 { height: 100%; }
-#chatbot { flex-grow: 1; overflow: auto;}
-"""
-with gr.Blocks(css=CSS) as demo:
+              
+        
+with gr.Blocks(css="footer {display: none} .contain { height: 100vh !important } .gap { height: 90% !important }") as demo:
     # with gr.Accordion("Advanced options"):
     #     selected_model = gr.Radio(label="model", choices=["llama-3.2-90b-text-preview", "llama-3.1-sonar-large-128k-online"], value="llama-3.2-90b-text-preview", interactive=True)
     #     input_openai_api_base = gr.Textbox(label="openai api base", placeholder=input_openai_api_base)
     
-    system_prompt = gr.Textbox(label="system", placeholder="system prompt here...")
-    gr.Examples(
-        examples=[
-            "翻译用户提供的文案为中文，翻译时考虑上下文。删除括号内参考文献文字内容。",
-            "作为一名人工智能行业内专家，找出用户提供的文案中不正确的信息，并进行修正。",
-        ],
-        inputs=[system_prompt],
-    )
+    with gr.Accordion("System Prompt", open=False):
+        system_prompt = gr.Textbox(label="system", placeholder="system prompt here...")
+        gr.Examples(
+            examples=[
+                "针砭时弊，微言大义",
+                "你是一位文采斐然的文学家",
+            ],
+            inputs=[system_prompt],
+        )
     chatbot = gr.ChatInterface(
         predict,
         additional_inputs=[system_prompt],
+        fill_height=True,
     )
 
 demo.launch(server_port=18080)
