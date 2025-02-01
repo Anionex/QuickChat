@@ -9,7 +9,7 @@ import dotenv
 
 dotenv.load_dotenv(override=True)
 
-selected_model = "/root/autodl-tmp/models"
+selected_model = "/root/deepseek-r1-distill-qwen-32b"
 input_openai_api_base = os.getenv("OPENAI_API_BASE")
 def predict(message, history, system_prompt):
     client = OpenAI(            
